@@ -3,62 +3,34 @@ name: Build, Push, and Deploy Docker Image
 on:
   push:
     branches:
-      - main # main 브랜치에 코드가 push될 때 트리거됩니다.
-  pull_request:
-    branches:
       - main
-  workflow_dispatch: # 수동 실행을 지원하기 위한 옵션
+  workflow_dispatch:
 
 jobs:
-  build-and-push:
-    runs-on: ubuntu-latest
+  build-and-deploy:
+    runs-on: self-hosted
 
     steps:
       - name: 저장소 코드 체크아웃 (Checkout Code)
         uses: actions/checkout@v4
 
-      - name: Docker Buildx 설정 (Set up Docker Buildx)
-        uses: docker/setup-buildx-action@v3
-
       - name: Docker Hub 로그인 (Login to Docker Hub)
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+        shell: cmd
+        run: docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Docker 이미지 빌드 및 푸시 (Build and Push)
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: ${{ github.event_name != 'pull_request' }} 
-          tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/mlops-ai-image-detector:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/mlops-ai-image-detector:${{ github.sha }}
-          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/mlops-ai-image-detector:buildcache
-          cache-to: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/mlops-ai-image-detector:buildcache,mode=max
-
-  deploy-to-local:
-    needs: build-and-push
-    if: github.event_name != 'pull_request'
-    runs-on: self-hosted
-
-    steps:
-      - name: Docker Hub 로그인 (Login to Docker Hub)
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+        shell: cmd
+        run: |
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/mlops-ai-image-detector:latest -t ${{ secrets.DOCKERHUB_USERNAME }}/mlops-ai-image-detector:${{ github.sha }} .
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/mlops-ai-image-detector:latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/mlops-ai-image-detector:${{ github.sha }}
 
       - name: 기존 컨테이너 중지 및 제거 (Stop and Remove old container)
         shell: cmd
-        run: |
-          docker rm -f mlops-ai >nul 2>nul
-          exit 0
+        run: docker rm -f mlops-ai 2>nul & exit /b 0
 
-      - name: 로컬 서버로 배포 및 실행 (Deploy to Local Server)
-        shell: powershell
+      - name: 최신 이미지 Pull 및 컨테이너 실행 (Deploy and Run)
+        shell: cmd
         run: |
-          $repo = "${{ secrets.DOCKERHUB_USERNAME }}".ToLower() + "/mlops-ai-image-detector"
-          docker pull "$repo`:latest"
-          docker run -d --name mlops-ai -p 8000:8000 "$repo`:latest"
+          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/mlops-ai-image-detector:latest
+          docker run -d --name mlops-ai -p 8000:8000 ${{ secrets.DOCKERHUB_USERNAME }}/mlops-ai-image-detector:latest
