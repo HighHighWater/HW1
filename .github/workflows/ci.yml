@@ -48,8 +48,7 @@ jobs:
     steps:
       - name: 기존 컨테이너 중지 및 제거 (Stop and Remove old container)
         run: |
-          docker stop mlops-ai
-          docker rm mlops-ai
+          docker rm -f mlops-ai
         continue-on-error: true
 
       - name: 로컬 서버로 배포 및 실행 (Deploy to Local Server)
