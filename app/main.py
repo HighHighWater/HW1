@@ -114,19 +114,8 @@ HTML = """
     .cat-icon { font-size: 2.6rem; line-height: 1; }
     .cat-info { flex: 1; }
     .cat-label { font-size: 0.72rem; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.5px; }
-    .cat-name  { font-size: 1.3rem; font-weight: 700; margin: 2px 0 6px; }
+    .cat-name  { font-size: 1.3rem; font-weight: 700; margin: 2px 0 4px; }
     .cat-raw   { font-size: 0.75rem; color: rgba(255,255,255,0.35); }
-    .cat-bar-wrap { margin-top: 6px; }
-    .cat-bar-bg {
-      height: 6px; background: rgba(255,255,255,0.08);
-      border-radius: 999px; overflow: hidden;
-    }
-    .cat-bar-fill {
-      height: 100%; border-radius: 999px;
-      background: linear-gradient(90deg, #f59e0b, #f97316);
-      transition: width 1s ease; width: 0%;
-    }
-    .cat-conf { font-size: 0.75rem; color: rgba(255,255,255,0.4); margin-top: 3px; text-align: right; }
 
     /* 메타 */
     .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
@@ -206,12 +195,6 @@ HTML = """
         <div class="cat-label">이미지 카테고리</div>
         <div class="cat-name" id="cat-name"></div>
         <div class="cat-raw" id="cat-raw"></div>
-        <div class="cat-bar-wrap">
-          <div class="cat-bar-bg">
-            <div class="cat-bar-fill" id="cat-bar"></div>
-          </div>
-          <div class="cat-conf" id="cat-conf"></div>
-        </div>
       </div>
     </div>
 
@@ -323,11 +306,6 @@ HTML = """
     document.getElementById('cat-icon').textContent = cat.icon;
     document.getElementById('cat-name').textContent = cat.name;
     document.getElementById('cat-raw').textContent  = cat.raw_label;
-    const catConf = Math.round(cat.confidence * 100);
-    document.getElementById('cat-conf').textContent = catConf + '%';
-    setTimeout(() => {
-      document.getElementById('cat-bar').style.width = catConf + '%';
-    }, 100);
 
     // 메타
     document.getElementById('meta-filename').textContent = data.filename;
