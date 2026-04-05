@@ -1,0 +1,43 @@
+name: Build and Push Docker Image
+
+on:
+  push:
+    branches:
+      - main # main 브랜치에 코드가 push될 때 트리거됩니다.
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 저장소 코드 체크아웃 (Checkout Code)
+        uses: actions/checkout@v4
+
+      - name: Docker Buildx 설정 (Set up Docker Buildx)
+        uses: docker/setup-buildx-action@v3
+        # 멀티 아키텍처 지원 및 향상된 빌드 캐싱을 위해 Buildx를 설정합니다.
+
+      - name: Docker Hub 로그인 (Login to Docker Hub)
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          # 보안 권장 사항: 비밀번호 대신 Docker Hub의 Access Token을 생성해서 사용하는 것을 권장합니다.
+
+      - name: Docker 이미지 빌드 및 푸시 (Build and Push)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          # Pull Request일 경우 환경을 테스트하기 위해 push는 하지 않습니다.
+          push: ${{ github.event_name != 'pull_request' }} 
+          # latest 태그와 해당 commit 커밋 해시 태그(고정 버전) 두 가지로 푸시
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/mlops-ai-image-detector:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/mlops-ai-image-detector:${{ github.sha }}
+          # Docker 빌드 캐시를 사용하여 다음 빌드 속도를 엄청나게 향상시킵니다.
+          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/mlops-ai-image-detector:buildcache
+          cache-to: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/mlops-ai-image-detector:buildcache,mode=max
