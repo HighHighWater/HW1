@@ -1,39 +1,64 @@
-name: Build and Deploy Local Docker Image
+name: Build, Push, and Deploy Docker Image
 
 on:
   push:
     branches:
-      - main
+      - main # main 브랜치에 코드가 push될 때 트리거됩니다.
   pull_request:
     branches:
       - main
-  workflow_dispatch: # 수동 실행
+  workflow_dispatch: # 수동 실행을 지원하기 위한 옵션
 
 jobs:
-  build-and-deploy:
-    runs-on: self-hosted
+  build-and-push:
+    runs-on: ubuntu-latest
 
     steps:
       - name: 저장소 코드 체크아웃 (Checkout Code)
         uses: actions/checkout@v4
 
+      - name: Docker Buildx 설정 (Set up Docker Buildx)
+        uses: docker/setup-buildx-action@v3
+
+      - name: Docker Hub 로그인 (Login to Docker Hub)
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Docker 이미지 빌드 및 푸시 (Build and Push)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: ${{ github.event_name != 'pull_request' }} 
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/mlops-ai-image-detector:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/mlops-ai-image-detector:${{ github.sha }}
+          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/mlops-ai-image-detector:buildcache
+          cache-to: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/mlops-ai-image-detector:buildcache,mode=max
+
+  deploy-to-local:
+    needs: build-and-push
+    if: github.event_name != 'pull_request'
+    runs-on: self-hosted
+
+    steps:
+      - name: Docker Hub 로그인 (Login to Docker Hub)
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: 기존 컨테이너 중지 및 제거 (Stop and Remove old container)
+        shell: cmd
         run: |
-          $container = docker ps -a -q -f name=mlops-ai
-          if ($container) {
-              Write-Host "Removing existing container..."
-              docker rm -f mlops-ai
-          } else {
-              Write-Host "Container does not exist, skipping removal."
-          }
-        continue-on-error: true
+          docker rm -f mlops-ai >nul 2>nul
+          exit 0
 
-      - name: Docker 이미지 로컬 빌드 (Build Docker Image locally)
+      - name: 로컬 서버로 배포 및 실행 (Deploy to Local Server)
+        shell: powershell
         run: |
-          Write-Host "Building Docker image..."
-          docker build -t mlops-ai-image-detector:latest .
-
-      - name: 로컬 서버로 실행 (Deploy and Run Container)
-        run: |
-          Write-Host "Starting new container..."
-          docker run -d --name mlops-ai -p 8000:8000 mlops-ai-image-detector:latest
+          $repo = "${{ secrets.DOCKERHUB_USERNAME }}".ToLower() + "/mlops-ai-image-detector"
+          docker pull "$repo`:latest"
+          docker run -d --name mlops-ai -p 8000:8000 "$repo`:latest"
