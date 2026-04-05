@@ -9,7 +9,7 @@ def get_model():
     if _model is None:
         _model = pipeline(
             "image-classification",
-            model="Nahid/ai-generated-image-detector"
+            model="umm-maybe/AI-image-detector"
         )
     return _model
 
@@ -23,8 +23,9 @@ def predict_image(image_bytes: bytes) -> dict:
     model = get_model()
     results = model(image)
 
-    # results 예시: [{'label': 'AI', 'score': 0.97}, {'label': 'Real', 'score': 0.03}]
-    top = results[0]
+    # results 예시: [{'label': 'artificial', 'score': 0.97}, {'label': 'real', 'score': 0.03}]
+    # 가장 높은 점수의 레이블로 판별
+    top = max(results, key=lambda x: x["score"])
     label_upper = top["label"].upper()
     is_ai = any(k in label_upper for k in ("AI", "FAKE", "ARTIFICIAL", "GENERATED", "SYNTHETIC"))
     confidence = round(top["score"], 4)
