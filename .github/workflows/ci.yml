@@ -10,7 +10,7 @@ on:
 
 jobs:
   build-and-push:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
 
     steps:
       - name: 저장소 코드 체크아웃 (Checkout Code)
@@ -38,15 +38,19 @@ jobs:
           cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/mlops-ai-image-detector:buildcache
           cache-to: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/mlops-ai-image-detector:buildcache,mode=max
 
+  deploy-to-local:
+    needs: build-and-push
+    if: github.event_name != 'pull_request'
+    runs-on: self-hosted
+
+    steps:
       - name: 기존 컨테이너 중지 및 제거 (Stop and Remove old container)
-        if: github.event_name != 'pull_request'
         run: |
           docker stop mlops-ai
           docker rm mlops-ai
         continue-on-error: true
 
       - name: 로컬 서버로 배포 및 실행 (Deploy to Local Server)
-        if: github.event_name != 'pull_request'
         run: |
           docker pull ${{ secrets.DOCKERHUB_USERNAME }}/mlops-ai-image-detector:latest
           docker run -d --name mlops-ai -p 8000:8000 ${{ secrets.DOCKERHUB_USERNAME }}/mlops-ai-image-detector:latest
