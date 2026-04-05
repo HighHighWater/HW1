@@ -60,5 +60,6 @@ jobs:
       - name: 로컬 서버로 배포 및 실행 (Deploy to Local Server)
         run: |
           $repo = "${{ secrets.DOCKERHUB_USERNAME }}".ToLower() + "/mlops-ai-image-detector"
-          docker pull "$repo:latest"
-          docker run -d --name mlops-ai -p 8000:8000 "$repo:latest"
+          Write-Host "Deploying repository: ${repo}:latest"
+          docker pull "${repo}:latest"
+          docker run -d --name mlops-ai -p 8000:8000 "${repo}:latest"
