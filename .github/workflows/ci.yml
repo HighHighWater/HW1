@@ -29,8 +29,6 @@ jobs:
         shell: cmd
         run: docker rm -f mlops-ai 2>nul & exit /b 0
 
-      - name: 최신 이미지 Pull 및 컨테이너 실행 (Deploy and Run)
+      - name: 새 컨테이너 실행 (Deploy and Run)
         shell: cmd
-        run: |
-          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/mlops-ai-image-detector:latest
-          docker run -d --name mlops-ai -p 8000:8000 ${{ secrets.DOCKERHUB_USERNAME }}/mlops-ai-image-detector:latest
+        run: docker run -d --name mlops-ai -p 8000:8000 ${{ secrets.DOCKERHUB_USERNAME }}/mlops-ai-image-detector:${{ github.sha }}
